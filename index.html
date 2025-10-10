@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Interactive 3D Cube</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+            body {
+                margin: 0;
+                overflow: hidden;
+                background-color: #111827; /* bg-gray-900 */
+            }
+            canvas {
+                display: block;
+            }
+            #info {
+                position: absolute;
+                top: 10px;
+                width: 100%;
+                text-align: center;
+                z-index: 100;
+                color: white;
+                font-family: 'Inter', sans-serif;
+                font-size: 1.125rem; /* text-lg */
+            }
+            #tooltip {
+                position: absolute;
+                display: none;
+                background: rgba(0, 0, 0, 0.7);
+                color: white;
+                padding: 5px 10px;
+                border-radius: 5px;
+                pointer-events: none; /* So it doesn't interfere with mouse events on the canvas */
+                font-family: 'Inter', sans-serif;
+                transform: translate(-50%, -120%); /* Offset to appear above the cursor */
+            }
+        </style>
+    </head>
+    <body>
+
+        <div id="info">Test 3D</div>
+        <div id="tooltip"></div>
+        <canvas id="bg"></canvas>
+
+        <!-- Import Three.js -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+        <script type="module">
+            // Basic Scene Setup
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({
+                canvas: document.querySelector('#bg'),
+                antialias: true,
+            });
+
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            camera.position.setZ(5);
+
+            // --- Create a group to hold the cubes ---
+            const cubeGroup = new THREE.Group();
+            scene.add(cubeGroup);
+
+            // --- Cube 1 Creation ---
+            // The object's shape
+            const geometry = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+            // The object's appearance (color, texture, etc.)
+            // We use MeshStandardMaterial to make it react to light
+            const originalColor = 0x0099ff;
+            const hoverColor = 0xff6347; // Tomato red
+            const material = new THREE.MeshStandardMaterial({ color: originalColor });
+            // The final object, combining geometry and material
+            const cube = new THREE.Mesh(geometry, material);
+            cube.position.x = 2; // Position to the right
+            cubeGroup.add(cube);
+
+            // Add custom data to the cube for hover logic
+            cube.userData = { originalColor: originalColor, hoverColor: hoverColor, hoverText: 'text 1' };
+
+            // --- Cube 2 Creation ---
+            const geometry2 = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+            const originalColor2 = 0x8A2BE2; // Blue-violet
+            const hoverColor2 = 0x32CD32; // Lime green
+            const material2 = new THREE.MeshStandardMaterial({ color: originalColor2 });
+            const cube2 = new THREE.Mesh(geometry2, material2);
+            cube2.position.x = -2; // Position to the left
+            cubeGroup.add(cube2);
+
+            // Add custom data to the second cube
+            cube2.userData = { originalColor: originalColor2, hoverColor: hoverColor2, hoverText: 'text 2' };
+
+
+            // --- Lighting ---
+            // A point light acts like a light bulb, emitting light from a single point
+            const pointLight = new THREE.PointLight(0xffffff, 1.2);
+            pointLight.position.set(5, 5, 5);
+
+            // An ambient light illuminates all objects in the scene equally
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(pointLight, ambientLight);
+
+
+            // --- Interactivity Setup ---
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+            let intersectedObject = null;
+
+            // New variables for mouse dragging
+            let isDragging = false;
+            const previousMousePosition = {
+                x: 0,
+                y: 0
+            };
+
+            function onMouseMove(event) {
+                // Calculate mouse position in normalized device coordinates (-1 to +1) for both components
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+
+                // Handle cube rotation if dragging
+                if (isDragging) {
+                    const deltaX = event.clientX - previousMousePosition.x;
+                    const deltaY = event.clientY - previousMousePosition.y;
+
+                    cubeGroup.rotation.y += deltaX * 0.01;
+                    cubeGroup.rotation.x += deltaY * 0.01;
+
+                    previousMousePosition.x = event.clientX;
+                    previousMousePosition.y = event.clientY;
+                }
+            }
+
+            function onMouseClick(event) {
+                // Update the picking ray with the camera and mouse position
+                raycaster.setFromCamera(mouse, camera);
+
+                // Calculate objects intersecting the picking ray
+                const intersects = raycaster.intersectObjects(cubeGroup.children);
+
+                if (intersects.length > 0) {
+                    const clickedObject = intersects[0].object;
+                    console.log('A cube was clicked!');
+                    // You can add any click logic here, e.g., make it jump or scale
+                    clickedObject.scale.set(1.1, 1.1, 1.1);
+                    setTimeout(() => clickedObject.scale.set(1, 1, 1), 200);
+                }
+            }
+
+            function onMouseDown(event) {
+                // No need to check for intersection. Start dragging on any mousedown.
+                isDragging = true;
+                previousMousePosition.x = event.clientX;
+                previousMousePosition.y = event.clientY;
+            }
+
+            function onMouseUp() {
+                isDragging = false;
+            }
+            
+            window.addEventListener('mousemove', onMouseMove, false);
+            window.addEventListener('click', onMouseClick, false);
+            window.addEventListener('mousedown', onMouseDown, false);
+            window.addEventListener('mouseup', onMouseUp, false);
+
+
+            // --- Responsiveness ---
+            window.addEventListener('resize', onWindowResize, false);
+
+            function onWindowResize() {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+
+            // --- Animation Loop ---
+            function animate() {
+                requestAnimationFrame(animate);
+
+                // --- Hover Logic ---
+                // Update the picking ray with the camera and mouse position
+                raycaster.setFromCamera(mouse, camera);
+
+                // Calculate objects intersecting the picking ray
+                const intersects = raycaster.intersectObjects(cubeGroup.children);
+
+                if (intersects.length > 0) {
+                    // If we're hovering a new object
+                    if (intersectedObject !== intersects[0].object) {
+                        // Restore previous object's color if there was one
+                        if (intersectedObject) {
+                            intersectedObject.material.color.set(intersectedObject.userData.originalColor);
+                        }
+                        // Store reference to new hovered object and set its hover color
+                        intersectedObject = intersects[0].object;
+                        intersectedObject.material.color.set(intersectedObject.userData.hoverColor);
+                    }
+                } else {
+                    // If we're not hovering anything, but we were before
+                    if (intersectedObject) {
+                        // Restore the color of the object we are no longer hovering
+                        intersectedObject.material.color.set(intersectedObject.userData.originalColor);
+                        intersectedObject = null;
+                    }
+                }
+
+                // --- Tooltip Logic ---
+                /* const tooltip = document.getElementById('tooltip');
+                if (intersectedObject) {
+                    tooltip.style.display = 'block';
+                    tooltip.textContent = intersectedObject.userData.hoverText;
+
+                    // Calculate the 2D position of the 3D object
+                    const worldPosition = new THREE.Vector3();
+                    intersectedObject.getWorldPosition(worldPosition);
+                    const screenPosition = worldPosition.project(camera);
+
+                    const translateX = (screenPosition.x * 0.5 + 0.5) * renderer.domElement.clientWidth;
+                    const translateY = (-screenPosition.y * 0.5 + 0.5) * renderer.domElement.clientHeight;
+                    
+                    tooltip.style.left = ${translateX}px;
+                    tooltip.style.top = ${translateY}px;
+                } else {
+                    tooltip.style.display = 'none';
+                }
+                */
+                renderer.render(scene, camera);
+            }
+
+            // Start the animation
+            animate();
+        </script>
+    </body>
+</html>
