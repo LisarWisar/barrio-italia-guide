@@ -1,235 +1,272 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Interactive 3D Cube</title>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <style>
-            body {
-                margin: 0;
-                overflow: hidden;
-                background-color: #111827; /* bg-gray-900 */
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive 3D Cube</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" xintegrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #111827; /* bg-gray-900 */
+        }
+        canvas {
+            display: block;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            text-align: center;
+            z-index: 100;
+            color: white;
+            font-family: 'Inter', sans-serif;
+            font-size: 1.125rem; /* text-lg */
+        }
+        #tooltip {
+            position: absolute;
+            display: none;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            pointer-events: none; /* So it doesn't interfere with mouse events on the canvas */
+            font-family: 'Inter', sans-serif;
+            transform: translate(-50%, -120%); /* Offset to appear above the cursor */
+        }
+        /* Style for the modal to fit the dark theme */
+        .modal-content {
+            background-color: #2d3748;
+            color: white;
+        }
+        .modal-header {
+            border-bottom: 1px solid #4a5568;
+        }
+        .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="info">Click and drag anywhere to rotate the cubes.</div>
+    <div id="tooltip"></div>
+    <canvas id="bg"></canvas>
+
+    <!-- Bootstrap Modal HTML -->
+    <div class="modal fade" id="cubeModal" tabindex="-1" aria-labelledby="cubeModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="cubeModalLabel"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="cubeModalBody">
+                    <!-- Content will be set by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" xintegrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+    <script type="module">
+        // Basic Scene Setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({
+            canvas: document.querySelector('#bg'),
+            antialias: true,
+        });
+
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        camera.position.setZ(5);
+
+        // --- Create a group to hold the cubes ---
+        const cubeGroup = new THREE.Group();
+        scene.add(cubeGroup);
+
+        // --- Cube 1 Creation ---
+        const geometry = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+        const originalColor = 0x0099ff;
+        const hoverColor = 0xff6347; // Tomato red
+        const material = new THREE.MeshStandardMaterial({ color: originalColor });
+        const cube = new THREE.Mesh(geometry, material);
+        cube.position.x = 2; // Position to the right
+        cubeGroup.add(cube);
+
+        // Add custom data to the cube for hover logic
+        cube.userData = { 
+            originalColor: originalColor, hoverColor: hoverColor, hoverText: 'Tienda 1',
+            shopDescription: 'Esta es una tienda de zapatos'
+        };
+
+        // --- Cube 2 Creation ---
+        const geometry2 = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+        const originalColor2 = 0x8A2BE2; // Blue-violet
+        const hoverColor2 = 0x32CD32; // Lime green
+        const material2 = new THREE.MeshStandardMaterial({ color: originalColor2 });
+        const cube2 = new THREE.Mesh(geometry2, material2);
+        cube2.position.x = -2; // Position to the left
+        cubeGroup.add(cube2);
+
+        // Add custom data to the second cube
+        cube2.userData = { 
+            originalColor: originalColor2, hoverColor: hoverColor2, hoverText: 'Tienda 2',
+            shopDescription: 'Esta es una pizzeria'
+        };
+
+        // --- Lighting ---
+        const pointLight = new THREE.PointLight(0xffffff, 1.2);
+        pointLight.position.set(5, 5, 5);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(pointLight, ambientLight);
+
+
+        // --- Interactivity Setup ---
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        let intersectedObject = null;
+
+        // New variables for mouse dragging
+        let isMouseDown = false;
+        const previousMousePosition = { x: 0, y: 0 };
+        
+        // --- Bootstrap Modal Instance ---
+        const cubeModal = new bootstrap.Modal(document.getElementById('cubeModal'));
+
+        function onMouseMove(event) {
+            // Calculate mouse position in normalized device coordinates (-1 to +1) for both components
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+
+            // Handle cube rotation if dragging
+            if (isMouseDown) {
+                const deltaX = event.clientX - previousMousePosition.x;
+                const deltaY = event.clientY - previousMousePosition.y;
+
+                cubeGroup.rotation.y += deltaX * 0.01;
+                cubeGroup.rotation.x += deltaY * 0.01;
+
+                previousMousePosition.x = event.clientX;
+                previousMousePosition.y = event.clientY;
             }
-            canvas {
-                display: block;
-            }
-            #info {
-                position: absolute;
-                top: 10px;
-                width: 100%;
-                text-align: center;
-                z-index: 100;
-                color: white;
-                font-family: 'Inter', sans-serif;
-                font-size: 1.125rem; /* text-lg */
-            }
-            #tooltip {
-                position: absolute;
-                display: none;
-                background: rgba(0, 0, 0, 0.7);
-                color: white;
-                padding: 5px 10px;
-                border-radius: 5px;
-                pointer-events: none; /* So it doesn't interfere with mouse events on the canvas */
-                font-family: 'Inter', sans-serif;
-                transform: translate(-50%, -120%); /* Offset to appear above the cursor */
-            }
-        </style>
-    </head>
-    <body>
+        }
 
-        <div id="info">Test 3D</div>
-        <div id="tooltip"></div>
-        <canvas id="bg"></canvas>
+        function onMouseClick(event) {
+            // This function is no longer needed and will be removed.
+        }
 
-        <!-- Import Three.js -->
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+        let dragStart = {x: 0, y: 0};
+        function onMouseDown(event) {
+            isMouseDown = true;
+            dragStart.x = event.clientX;
+            dragStart.y = event.clientY;
+            
+            // Set up for dragging
+            previousMousePosition.x = event.clientX;
+            previousMousePosition.y = event.clientY;
+        }
 
-        <script type="module">
-            // Basic Scene Setup
-            const scene = new THREE.Scene();
-            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            const renderer = new THREE.WebGLRenderer({
-                canvas: document.querySelector('#bg'),
-                antialias: true,
-            });
-
-            renderer.setPixelRatio(window.devicePixelRatio);
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            camera.position.setZ(5);
-
-            // --- Create a group to hold the cubes ---
-            const cubeGroup = new THREE.Group();
-            scene.add(cubeGroup);
-
-            // --- Cube 1 Creation ---
-            // The object's shape
-            const geometry = new THREE.BoxGeometry(1.5, 1.5, 1.5);
-            // The object's appearance (color, texture, etc.)
-            // We use MeshStandardMaterial to make it react to light
-            const originalColor = 0x0099ff;
-            const hoverColor = 0xff6347; // Tomato red
-            const material = new THREE.MeshStandardMaterial({ color: originalColor });
-            // The final object, combining geometry and material
-            const cube = new THREE.Mesh(geometry, material);
-            cube.position.x = 2; // Position to the right
-            cubeGroup.add(cube);
-
-            // Add custom data to the cube for hover logic
-            cube.userData = { originalColor: originalColor, hoverColor: hoverColor, hoverText: 'text 1' };
-
-            // --- Cube 2 Creation ---
-            const geometry2 = new THREE.BoxGeometry(1.5, 1.5, 1.5);
-            const originalColor2 = 0x8A2BE2; // Blue-violet
-            const hoverColor2 = 0x32CD32; // Lime green
-            const material2 = new THREE.MeshStandardMaterial({ color: originalColor2 });
-            const cube2 = new THREE.Mesh(geometry2, material2);
-            cube2.position.x = -2; // Position to the left
-            cubeGroup.add(cube2);
-
-            // Add custom data to the second cube
-            cube2.userData = { originalColor: originalColor2, hoverColor: hoverColor2, hoverText: 'text 2' };
-
-
-            // --- Lighting ---
-            // A point light acts like a light bulb, emitting light from a single point
-            const pointLight = new THREE.PointLight(0xffffff, 1.2);
-            pointLight.position.set(5, 5, 5);
-
-            // An ambient light illuminates all objects in the scene equally
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-            scene.add(pointLight, ambientLight);
-
-
-            // --- Interactivity Setup ---
-            const raycaster = new THREE.Raycaster();
-            const mouse = new THREE.Vector2();
-            let intersectedObject = null;
-
-            // New variables for mouse dragging
-            let isDragging = false;
-            const previousMousePosition = {
-                x: 0,
-                y: 0
-            };
-
-            function onMouseMove(event) {
-                // Calculate mouse position in normalized device coordinates (-1 to +1) for both components
-                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-                mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
-
-                // Handle cube rotation if dragging
-                if (isDragging) {
-                    const deltaX = event.clientX - previousMousePosition.x;
-                    const deltaY = event.clientY - previousMousePosition.y;
-
-                    cubeGroup.rotation.y += deltaX * 0.01;
-                    cubeGroup.rotation.x += deltaY * 0.01;
-
-                    previousMousePosition.x = event.clientX;
-                    previousMousePosition.y = event.clientY;
-                }
-            }
-
-            function onMouseClick(event) {
-                // Update the picking ray with the camera and mouse position
+        function onMouseUp(event) {
+            isMouseDown = false;
+            // Check if mouse moved significantly. If not, treat as a click.
+            const deltaX = Math.abs(event.clientX - dragStart.x);
+            const deltaY = Math.abs(event.clientY - dragStart.y);
+            if (deltaX < 5 && deltaY < 5) {
+                // It's a click, so we do the raycast and modal logic here
                 raycaster.setFromCamera(mouse, camera);
-
-                // Calculate objects intersecting the picking ray
                 const intersects = raycaster.intersectObjects(cubeGroup.children);
 
                 if (intersects.length > 0) {
                     const clickedObject = intersects[0].object;
-                    console.log('A cube was clicked!');
-                    // You can add any click logic here, e.g., make it jump or scale
+                    
+                    // Update modal content and show it
+                    const modalBody = document.getElementById('cubeModalBody');
+                    modalBody.textContent = clickedObject.userData.shopDescription;
+
+                    const modalTitle = document.getElementById('cubeModalLabel');
+                    modalTitle.textContent = clickedObject.userData.hoverText;
+                    cubeModal.show();
+
+                    // Visual feedback on click
                     clickedObject.scale.set(1.1, 1.1, 1.1);
                     setTimeout(() => clickedObject.scale.set(1, 1, 1), 200);
                 }
             }
-
-            function onMouseDown(event) {
-                // No need to check for intersection. Start dragging on any mousedown.
-                isDragging = true;
-                previousMousePosition.x = event.clientX;
-                previousMousePosition.y = event.clientY;
-            }
-
-            function onMouseUp() {
-                isDragging = false;
-            }
-            
-            window.addEventListener('mousemove', onMouseMove, false);
-            window.addEventListener('click', onMouseClick, false);
-            window.addEventListener('mousedown', onMouseDown, false);
-            window.addEventListener('mouseup', onMouseUp, false);
+        }
+        
+        // --- Event Listeners ---
+        window.addEventListener('mousemove', onMouseMove, false);
+        window.removeEventListener('click', onMouseClick, false); // Remove the old click listener
+        window.addEventListener('mousedown', onMouseDown, false);
+        window.addEventListener('mouseup', onMouseUp, false);
 
 
-            // --- Responsiveness ---
-            window.addEventListener('resize', onWindowResize, false);
+        // --- Responsiveness ---
+        window.addEventListener('resize', onWindowResize, false);
 
-            function onWindowResize() {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            }
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
 
-            // --- Animation Loop ---
-            function animate() {
-                requestAnimationFrame(animate);
+        // --- Animation Loop ---
+        function animate() {
+            requestAnimationFrame(animate);
 
-                // --- Hover Logic ---
-                // Update the picking ray with the camera and mouse position
+            // --- Hover Logic ---
+            if (!isMouseDown) { // Only show hover effect when not dragging
                 raycaster.setFromCamera(mouse, camera);
-
-                // Calculate objects intersecting the picking ray
                 const intersects = raycaster.intersectObjects(cubeGroup.children);
 
                 if (intersects.length > 0) {
-                    // If we're hovering a new object
                     if (intersectedObject !== intersects[0].object) {
-                        // Restore previous object's color if there was one
                         if (intersectedObject) {
                             intersectedObject.material.color.set(intersectedObject.userData.originalColor);
                         }
-                        // Store reference to new hovered object and set its hover color
                         intersectedObject = intersects[0].object;
                         intersectedObject.material.color.set(intersectedObject.userData.hoverColor);
                     }
                 } else {
-                    // If we're not hovering anything, but we were before
                     if (intersectedObject) {
-                        // Restore the color of the object we are no longer hovering
                         intersectedObject.material.color.set(intersectedObject.userData.originalColor);
                         intersectedObject = null;
                     }
                 }
-
-                // --- Tooltip Logic ---
-                /* const tooltip = document.getElementById('tooltip');
-                if (intersectedObject) {
-                    tooltip.style.display = 'block';
-                    tooltip.textContent = intersectedObject.userData.hoverText;
-
-                    // Calculate the 2D position of the 3D object
-                    const worldPosition = new THREE.Vector3();
-                    intersectedObject.getWorldPosition(worldPosition);
-                    const screenPosition = worldPosition.project(camera);
-
-                    const translateX = (screenPosition.x * 0.5 + 0.5) * renderer.domElement.clientWidth;
-                    const translateY = (-screenPosition.y * 0.5 + 0.5) * renderer.domElement.clientHeight;
-                    
-                    tooltip.style.left = ${translateX}px;
-                    tooltip.style.top = ${translateY}px;
-                } else {
-                    tooltip.style.display = 'none';
-                }
-                */
-                renderer.render(scene, camera);
             }
+            
+            // --- Tooltip Logic ---
+            /* const tooltip = document.getElementById('tooltip');
+            if (intersectedObject && !isMouseDown) {
+                tooltip.style.display = 'block';
+                tooltip.textContent = intersectedObject.userData.hoverText;
 
-            // Start the animation
-            animate();
-        </script>
-    </body>
+                const worldPosition = new THREE.Vector3();
+                intersectedObject.getWorldPosition(worldPosition);
+                const screenPosition = worldPosition.project(camera);
+
+                const translateX = (screenPosition.x * 0.5 + 0.5) * renderer.domElement.clientWidth;
+                const translateY = (-screenPosition.y * 0.5 + 0.5) * renderer.domElement.clientHeight;
+                
+                tooltip.style.left = ${translateX}px;
+                tooltip.style.top = ${translateY}px;
+            } else {
+                tooltip.style.display = 'none';
+            } */
+
+            renderer.render(scene, camera);
+        }
+
+        // Start the animation
+        animate();
+    </script>
+</body>
 </html>
