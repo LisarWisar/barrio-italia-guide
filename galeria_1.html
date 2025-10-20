@@ -17,10 +17,9 @@
         }
         #info {
             position: absolute;
-            top: 10px;
+            top: 40px;
             width: 100%;
             text-align: center;
-            z-index: 100;
             color: white;
             font-family: 'Inter', sans-serif;
             font-size: 1.125rem; /* text-lg */
@@ -50,7 +49,9 @@
     </style>
 </head>
 <body>
-
+    <a href="index.html">
+        <button>Volver</button>
+    </a>
     <div id="info">Use your mouse to navigate the scene.</div>
     <div id="tooltip"></div>
     <canvas id="bg"></canvas>
@@ -111,6 +112,8 @@
         controls.minDistance = 5;
         controls.maxDistance = 50;
 
+        
+
 
         // --- Create a group to hold the objects ---
         const objectGroup = new THREE.Group();
@@ -118,28 +121,11 @@
 
         // --- FBX MODEL LOADING ---
         const loader = new FBXLoader();
-        loader.load('modelos_fbx/exteriores.fbx', function (fbx) {
+        loader.load('modelos_fbx/galeria_1_interior.fbx', function (fbx) {
             
             fbx.traverse(function (child) {
                 if (child.isMesh) {
-                    
-                    // --- SETUP FOR GALERIA 1 (Navigation) ---
-                    if (child.name === 'galeria_1') { 
-                        const originalColor = 0x0099ff;
-                        const hoverColor = 0xff6347;
-                        child.material = new THREE.MeshStandardMaterial({ color: originalColor });
-                        
-                        child.userData = { 
-                            action: 'navigate',
-                            url: 'galeria_1.html',
-                            originalColor: originalColor, 
-                            hoverColor: hoverColor,     
-                            hoverText: 'Galería 1'
-                        };
-                    }
-
-                    // --- SETUP FOR TIENDA 1 (Modal) ---
-                    if (child.name === 'tienda_1') {
+                    if (child.name === 'galeria_1_tienda_1') {
                          const originalColor = 0x8A2BE2;
                          const hoverColor = 0x32CD32;
                          child.material = new THREE.MeshStandardMaterial({ color: originalColor });
@@ -150,6 +136,84 @@
                             hoverColor: hoverColor, 
                             hoverText: 'Tienda 1',
                             shopDescription: 'Esta es la descripción para la Tienda 1.'
+                        };
+                    }
+                    if (child.name === 'galeria_1_tienda_2') {
+                         const originalColor = 0x8A2BE2;
+                         const hoverColor = 0x32CD32;
+                         child.material = new THREE.MeshStandardMaterial({ color: originalColor });
+                         
+                         child.userData = { 
+                            action: 'modal',
+                            originalColor: originalColor, 
+                            hoverColor: hoverColor, 
+                            hoverText: 'Tienda 2',
+                            shopDescription: 'Esta es la descripción para la Tienda 2.'
+                        };
+                    }
+                    if (child.name === 'galeria_1_tienda_3') {
+                         const originalColor = 0x8A2BE2;
+                         const hoverColor = 0x32CD32;
+                         child.material = new THREE.MeshStandardMaterial({ color: originalColor });
+                         
+                         child.userData = { 
+                            action: 'modal',
+                            originalColor: originalColor, 
+                            hoverColor: hoverColor, 
+                            hoverText: 'Tienda 3',
+                            shopDescription: 'Esta es la descripción para la Tienda 3.'
+                        };
+                    }
+                    if (child.name === 'galeria_1_tienda_4') {
+                         const originalColor = 0x8A2BE2;
+                         const hoverColor = 0x32CD32;
+                         child.material = new THREE.MeshStandardMaterial({ color: originalColor });
+                         
+                         child.userData = { 
+                            action: 'modal',
+                            originalColor: originalColor, 
+                            hoverColor: hoverColor, 
+                            hoverText: 'Tienda 4',
+                            shopDescription: 'Esta es la descripción para la Tienda 4.'
+                        };
+                    }
+                    if (child.name === 'galeria_1_tienda_5') {
+                         const originalColor = 0x8A2BE2;
+                         const hoverColor = 0x32CD32;
+                         child.material = new THREE.MeshStandardMaterial({ color: originalColor });
+                         
+                         child.userData = { 
+                            action: 'modal',
+                            originalColor: originalColor, 
+                            hoverColor: hoverColor, 
+                            hoverText: 'Tienda 5',
+                            shopDescription: 'Esta es la descripción para la Tienda 5.'
+                        };
+                    }
+                    if (child.name === 'galeria_1_tienda_6') {
+                         const originalColor = 0x8A2BE2;
+                         const hoverColor = 0x32CD32;
+                         child.material = new THREE.MeshStandardMaterial({ color: originalColor });
+                         
+                         child.userData = { 
+                            action: 'modal',
+                            originalColor: originalColor, 
+                            hoverColor: hoverColor, 
+                            hoverText: 'Tienda 6',
+                            shopDescription: 'Esta es la descripción para la Tienda 6.'
+                        };
+                    }
+                    if (child.name === 'galeria_1_tienda_7') {
+                         const originalColor = 0x8A2BE2;
+                         const hoverColor = 0x32CD32;
+                         child.material = new THREE.MeshStandardMaterial({ color: originalColor });
+                         
+                         child.userData = { 
+                            action: 'modal',
+                            originalColor: originalColor, 
+                            hoverColor: hoverColor, 
+                            hoverText: 'Tienda 7',
+                            shopDescription: 'Esta es la descripción para la Tienda 7.'
                         };
                     }
                 }
@@ -252,7 +316,7 @@
             }
             
             // --- Tooltip Logic ---
-           const tooltip = document.getElementById('tooltip');
+            const tooltip = document.getElementById('tooltip');
             if (intersectedObject) {
                 tooltip.style.display = 'block';
                 tooltip.textContent = intersectedObject.userData.hoverText;
@@ -273,6 +337,7 @@
             } else {
                 tooltip.style.display = 'none';
             }
+
 
             renderer.render(scene, camera);
         }
