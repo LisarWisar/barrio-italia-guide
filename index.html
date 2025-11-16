@@ -116,42 +116,66 @@
         const objectGroup = new THREE.Group();
         scene.add(objectGroup);
 
+        // --- Shops Information --
+        const basicShopColor = 0xC1B36F;
+        const selectedShopColor = 0xDC8454;
+        const residentialColor = 0xCEC4C4;
+
+        const shopsID = [1,2,3,15,16,17,20,21,23,27,29,31];
+        const shopsName = shopsID.map((id) => 'edificio_' + id)
+        const shoppingCenterID = [4,5,6,30];
+        const shoppingCenterName = shoppingCenterID.map((id) => 'edificio_' + id)
+        const shopDefaultTitle = "Tienda";
+        const shopDefaultDescription = "Esta es una tienda"
+        const shoppingCenterDefaultTitle = "Galería";
+        const shoppingCenterDefaultDescription = "Esta es una galería"
+        const floorColor = 0x9A8585
+
+
         // --- FBX MODEL LOADING ---
         const loader = new FBXLoader();
-        loader.load('modelos_fbx/exteriores.fbx', function (fbx) {
+        loader.load('modelos_fbx/mapa_barrio_italia_v4_cuadra.fbx', function (fbx) {
             
             fbx.traverse(function (child) {
+                console.log(child.name);
                 if (child.isMesh) {
                     
-                    // --- SETUP FOR GALERIA 1 (Navigation) ---
-                    if (child.name === 'galeria_1') { 
-                        const originalColor = 0x0099ff;
-                        const hoverColor = 0xff6347;
-                        child.material = new THREE.MeshStandardMaterial({ color: originalColor });
+                    // -- Setup for a shop -- 
+                    if (shopsName.includes(child.name)) {
+                         child.material = new THREE.MeshStandardMaterial({ color: basicShopColor });
+                         
+                         child.userData = { 
+                            action: 'modal',
+                            originalColor: basicShopColor, 
+                            hoverColor: selectedShopColor, 
+                            hoverText: shopDefaultTitle,
+                            shopDescription: shopDefaultDescription
+                        };
+                    }
+
+                    // -- Setup for a shopping center -- 
+                    else if (shoppingCenterName.includes(child.name)) { 
+                        child.material = new THREE.MeshStandardMaterial({ color: basicShopColor });
                         
                         child.userData = { 
                             action: 'navigate',
                             url: 'galeria_1.html',
-                            originalColor: originalColor, 
-                            hoverColor: hoverColor,     
-                            hoverText: 'Galería 1'
+                            originalColor: basicShopColor, 
+                            hoverColor: selectedShopColor,     
+                            hoverText: shoppingCenterDefaultTitle
                         };
                     }
 
-                    // --- SETUP FOR TIENDA 1 (Modal) ---
-                    if (child.name === 'tienda_1') {
-                         const originalColor = 0x8A2BE2;
-                         const hoverColor = 0x32CD32;
-                         child.material = new THREE.MeshStandardMaterial({ color: originalColor });
-                         
-                         child.userData = { 
-                            action: 'modal',
-                            originalColor: originalColor, 
-                            hoverColor: hoverColor, 
-                            hoverText: 'Tienda 1',
-                            shopDescription: 'Esta es la descripción para la Tienda 1.'
-                        };
+                    // -- Setup for the floor -- 
+                    else if (child.name == "suelo"){
+                        child.material = new THREE.MeshStandardMaterial({ color: floorColor });
                     }
+                    
+                    // --- Setup edificio residencial ---
+                    else{
+                        child.material = new THREE.MeshStandardMaterial({ color: residentialColor });
+                    }
+
                 }
             });
 
