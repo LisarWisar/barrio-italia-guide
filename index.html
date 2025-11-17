@@ -38,14 +38,33 @@
         }
         /* Style for the modal to fit the dark theme */
         .modal-content {
-            background-color: #2d3748;
-            color: white;
+            background-color: #f2eaea;
+            color: black;
+            border: 2px solid #cec4c4;
         }
         .modal-header {
-            border-bottom: 1px solid #4a5568;
+            border-bottom: 1px solid #cec4c4;
+        }
+        .card-body{
+            background-color: #f2eaea;
+            color: black;
+            border: 1px solid #cec4c4;
         }
         .btn-close {
-            filter: invert(1) grayscale(100%) brightness(200%);
+            /* filter: invert(1) grayscale(100%) brightness(200%); */
+            color: black;
+        }
+        .modal-address{
+            font-size: smaller;
+        }
+        .shop-modal-close-button{
+            background-color: #cec4c4;
+            color: black;
+            margin-top: 16px;
+        }
+        .shop-modal-close-button:hover{
+            background-color: #DC8454;
+            color: black;
         }
     </style>
 </head>
@@ -59,12 +78,39 @@
     <div class="modal fade" id="cubeModal" tabindex="-1" aria-labelledby="cubeModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="cubeModalLabel"></h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body" id="cubeModalBody">
-                    <!-- Content will be set by JavaScript -->
+                <div class="card">
+                    <img src="images/Banner.png" class="card-img-top" alt="...">
+                    <div class="card-body">
+                       <div>
+                        <h2 class="text-center mb-3" id="shopTitle"></h2>
+                        <p class="modal-address mb-0 fw-light" id="shopAddress"></p>
+                        <p id="shopDescription"></p>
+                       </div>
+                       <div id="carouselExample" class="carousel slide">
+                            <div class="carousel-inner">
+                                <div class="carousel-item active">
+                                <img src="images/Foto.png" class="d-block w-100" alt="...">
+                                </div>
+                                <div class="carousel-item">
+                                <img src="images/Foto.png" class="d-block w-100" alt="...">
+                                </div>
+                                <div class="carousel-item">
+                                <img src="images/Foto.png" class="d-block w-100" alt="...">
+                                </div>
+                            </div>
+                            <button class="carousel-control-prev" type="button" data-bs-target="#carouselExample" data-bs-slide="prev">
+                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Previous</span>
+                            </button>
+                            <button class="carousel-control-next" type="button" data-bs-target="#carouselExample" data-bs-slide="next">
+                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Next</span>
+                            </button>
+                        </div>
+                        <div class="d-flex justify-content-end">
+                            <button type="button" class="btn shop-modal-close-button" data-bs-dismiss="modal">Cerrar</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -105,8 +151,6 @@
 
         // --- NEW: Add OrbitControls for free camera movement ---
         const controls = new OrbitControls(camera, renderer.domElement);
-   /*      controls.enableDamping = true; // Makes movement feel smoother
-        controls.dampingFactor = 0.05; */
         controls.screenSpacePanning = false;
         controls.minDistance = 5;
         controls.maxDistance = 50;
@@ -122,14 +166,21 @@
         const residentialColor = 0xCEC4C4;
 
         const shopsID = [1,2,3,15,16,17,20,21,23,27,29,31];
-        const shopsName = shopsID.map((id) => 'edificio_' + id)
+        const shopsNameID = shopsID.map((id) => 'edificio_' + id)
         const shoppingCenterID = [4,5,6,30];
-        const shoppingCenterName = shoppingCenterID.map((id) => 'edificio_' + id)
+        const shoppingCenterNameID = shoppingCenterID.map((id) => 'edificio_' + id);
         const shopDefaultTitle = "Tienda";
         const shopDefaultDescription = "Esta es una tienda"
         const shoppingCenterDefaultTitle = "Galería";
         const shoppingCenterDefaultDescription = "Esta es una galería"
+        const defaultAddress = "Calle Falsa 123"
         const floorColor = 0x9A8585
+
+        // -- Dummy Data --
+        const shopInfo = [
+            {id: "edificio_1", name: "Nómades foods", address: "Av. Irarrázaval 700, Ñuñoa", description: "Cafetería y panadería que ofrece consumo en el local, para llevar o entrega a domicilio. Ofrecen opciones veganas, opciones vegetarianas y opciones orgánicas. Hora de apertura: Lunes a martes desde 8:00 am hasta 9:00 pm – Sábado y Domingo desde 10:00 am hasta 8:30 pm. "},
+            {id: "edificio_31", name: "Ristorante y Trattoria Da Noi", address: "Av. Italia 1791, Ñuñoa", description: "Restaurante Italiano que ofrece consumo en el local, para llevar o entrega a domicilio. Ofrecen alcohol, opciones veganas, opciones vegetarianas y accesibilidad para personas en silla de ruedas. Hora de apertura: Lunes desde 12:00 pm hasta 7:00 pm – Martes a Sábado desde 12:00 pm hasta 9:30 pm – Domingos desde 12:00 pm hasta 5:00 pm. "}
+        ]
 
 
         // --- FBX MODEL LOADING ---
@@ -137,45 +188,63 @@
         loader.load('modelos_fbx/mapa_barrio_italia_v4_cuadra.fbx', function (fbx) {
             
             fbx.traverse(function (child) {
-                console.log(child.name);
                 if (child.isMesh) {
                     
-                    // -- Setup for a shop -- 
-                    if (shopsName.includes(child.name)) {
-                         child.material = new THREE.MeshStandardMaterial({ color: basicShopColor });
-                         
-                         child.userData = { 
-                            action: 'modal',
-                            originalColor: basicShopColor, 
-                            hoverColor: selectedShopColor, 
-                            hoverText: shopDefaultTitle,
-                            shopDescription: shopDefaultDescription
-                        };
-                    }
+                    const selectedShop = shopInfo.find(shop => shop.id == child.name) // Checks if the shop is included on the dummy data array
+                    if(!selectedShop){
 
-                    // -- Setup for a shopping center -- 
-                    else if (shoppingCenterName.includes(child.name)) { 
+                        // -- Setup for a shop -- 
+                        if (shopsNameID.includes(child.name)) {
+                            child.material = new THREE.MeshStandardMaterial({ color: basicShopColor });
+                            
+                            child.userData = { 
+                                action: 'modal',
+                                id: child.name,
+                                originalColor: basicShopColor, 
+                                hoverColor: selectedShopColor, 
+                                hoverText: shopDefaultTitle,
+                                shopDescription: shopDefaultDescription,
+                                shopAddress: defaultAddress
+                            };
+                        }
+
+                        // -- Setup for a shopping center -- 
+                        else if (shoppingCenterNameID.includes(child.name)) { 
+                            child.material = new THREE.MeshStandardMaterial({ color: basicShopColor });
+                            
+                            child.userData = { 
+                                action: 'navigate',
+                                id: child.name,
+                                url: 'galeria_1.html',
+                                originalColor: basicShopColor, 
+                                hoverColor: selectedShopColor,     
+                                hoverText: shoppingCenterDefaultTitle
+                            };
+                        }
+
+                        // -- Setup for the floor -- 
+                        else if (child.name == "suelo"){
+                            child.material = new THREE.MeshStandardMaterial({ color: floorColor });
+                        }
+                        
+                        // --- Setup residential building ---
+                        else{
+                            child.material = new THREE.MeshStandardMaterial({ color: residentialColor });
+                        }
+                    }
+                    else{
                         child.material = new THREE.MeshStandardMaterial({ color: basicShopColor });
                         
                         child.userData = { 
-                            action: 'navigate',
-                            url: 'galeria_1.html',
+                            action: 'modal',
+                            id: child.name,
                             originalColor: basicShopColor, 
-                            hoverColor: selectedShopColor,     
-                            hoverText: shoppingCenterDefaultTitle
+                            hoverColor: selectedShopColor, 
+                            hoverText: selectedShop.name,
+                            shopDescription: shopDefaultDescription,
+                            shopAddress: defaultAddress
                         };
                     }
-
-                    // -- Setup for the floor -- 
-                    else if (child.name == "suelo"){
-                        child.material = new THREE.MeshStandardMaterial({ color: floorColor });
-                    }
-                    
-                    // --- Setup edificio residencial ---
-                    else{
-                        child.material = new THREE.MeshStandardMaterial({ color: residentialColor });
-                    }
-
                 }
             });
 
@@ -221,11 +290,28 @@
                     window.location.href = clickedObject.userData.url;
 
                 } else if (clickedObject.userData.action === 'modal') {
-                    const modalBody = document.getElementById('cubeModalBody');
-                    modalBody.textContent = clickedObject.userData.shopDescription;
+                    const selectedShop = shopInfo.find(shop => shop.id == clickedObject.userData.id) // Checks if the shop is included on the dummy data array
 
-                    const modalTitle = document.getElementById('cubeModalLabel');
-                    modalTitle.textContent = clickedObject.userData.hoverText;
+                    if(!selectedShop){
+                        const modalBody = document.getElementById('shopDescription');
+                        modalBody.textContent = clickedObject.userData.shopDescription;
+
+                        const modalTitle = document.getElementById('shopTitle');
+                        modalTitle.textContent = clickedObject.userData.hoverText;
+
+                        const modalAddress = document.getElementById('shopAddress');
+                        modalAddress.textContent = clickedObject.userData.shopAddress;
+                    }
+                    else{
+                        const modalBody = document.getElementById('shopDescription');
+                        modalBody.textContent = selectedShop.description;
+
+                        const modalTitle = document.getElementById('shopTitle');
+                        modalTitle.textContent = selectedShop.name;
+
+                        const modalAddress = document.getElementById('shopAddress');
+                        modalAddress.textContent = selectedShop.address;
+                    }
                     cubeModal.show();
                 }
             }
