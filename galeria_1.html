@@ -112,9 +112,6 @@
         controls.minDistance = 5;
         controls.maxDistance = 50;
 
-        
-
-
         // --- Create a group to hold the objects ---
         const objectGroup = new THREE.Group();
         scene.add(objectGroup);
@@ -124,7 +121,9 @@
         loader.load('modelos_fbx/galeria_1_interior.fbx', function (fbx) {
             
             fbx.traverse(function (child) {
+
                 if (child.isMesh) {
+
                     if (child.name === 'galeria_1_tienda_1') {
                          const originalColor = 0x8A2BE2;
                          const hoverColor = 0x32CD32;
